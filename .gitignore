@@ -1,0 +1,6 @@
+# macOS Finder metadata
+.DS_Store
+**/*.DS_Store
+
+# Large image dataset (not for version control)
+ML_Lec/CNN Hands On /New_landmark_images
