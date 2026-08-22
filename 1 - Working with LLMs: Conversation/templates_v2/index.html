@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Python Tutor</title>
+  <style>
+    :root{
+      --bg:#0a0d16; --bg-2:#0e1220;
+      --surface:rgba(255,255,255,.045);
+      --surface-solid:#141a2b;
+      --border:rgba(255,255,255,.09);
+      --text:#e8eaf2; --muted:#95a0b8; --faint:#6b7590;
+      --accent:#7c8cff; --accent-2:#b06cf5;
+      --user-1:#5b6cff; --user-2:#9b5cf6;
+      --danger:#ff7a7a; --danger-bg:rgba(255,90,90,.10);
+      --code-bg:#0b0f1c;
+      --shadow:0 18px 45px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+    html[data-theme="light"]{
+      --bg:#f4f6fb; --bg-2:#eef1f9;
+      --surface:#ffffff;
+      --surface-solid:#ffffff;
+      --border:rgba(16,24,40,.10);
+      --text:#141a2b; --muted:#5b6478; --faint:#8b94a8;
+      --accent:#5b62f5; --accent-2:#9333ea;
+      --user-1:#5b62f5; --user-2:#8b5cf6;
+      --danger:#c02626; --danger-bg:rgba(192,38,38,.07);
+      --code-bg:#0f1526;
+      --shadow:0 14px 40px rgba(16,24,40,.10);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+      color:var(--text);
+      background:var(--bg);
+      -webkit-font-smoothing:antialiased;
+      overflow:hidden;
+    }
+    /* soft ambient glow behind everything */
+    body::before{
+      content:"";position:fixed;inset:0;z-index:-1;
+      background:
+        radial-gradient(60rem 40rem at 12% -10%, rgba(124,140,255,.20), transparent 60%),
+        radial-gradient(50rem 35rem at 92% 8%, rgba(176,108,245,.16), transparent 60%),
+        linear-gradient(180deg,var(--bg),var(--bg-2));
+    }
+
+    .app{height:100dvh;display:flex;flex-direction:column;max-width:900px;margin:0 auto;padding:0 20px}
+
+    /* ---------- header ---------- */
+    header{
+      display:flex;align-items:center;gap:14px;
+      padding:18px 4px 16px;
+    }
+    .logo{
+      width:42px;height:42px;border-radius:13px;flex:none;
+      display:grid;place-items:center;font-size:20px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow:0 8px 22px rgba(124,140,255,.35);
+    }
+    .titles h1{margin:0;font-size:17px;font-weight:650;letter-spacing:-.01em}
+    .titles p{margin:2px 0 0;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+    .dot{width:6px;height:6px;border-radius:50%;background:#3ddc97;box-shadow:0 0 0 3px rgba(61,220,151,.16)}
+    .spacer{flex:1}
+
+    .pill{
+      display:inline-flex;align-items:center;gap:7px;
+      padding:7px 13px;border-radius:999px;
+      background:var(--surface);border:1px solid var(--border);
+      font-size:12px;color:var(--muted);white-space:nowrap;
+      backdrop-filter:blur(8px);
+    }
+    .pill b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+
+    .icon-btn{
+      width:38px;height:38px;border-radius:12px;flex:none;
+      display:grid;place-items:center;cursor:pointer;font-size:15px;
+      background:var(--surface);border:1px solid var(--border);color:var(--muted);
+      transition:.18s;
+    }
+    .icon-btn:hover{color:var(--text);border-color:var(--accent);transform:translateY(-1px)}
+
+    /* ---------- chat ---------- */
+    .chat{
+      flex:1;min-height:0;overflow-y:auto;padding:6px 4px 12px;
+      display:flex;flex-direction:column;gap:18px;
+      scroll-behavior:smooth;
+    }
+    .chat::-webkit-scrollbar{width:8px}
+    .chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+    .chat::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+
+    .row{display:flex;gap:12px;align-items:flex-start;animation:rise .35s ease both}
+    .row.user{flex-direction:row-reverse}
+    @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+    .avatar{
+      width:32px;height:32px;border-radius:10px;flex:none;margin-top:2px;
+      display:grid;place-items:center;font-size:14px;
+      background:var(--surface);border:1px solid var(--border);
+    }
+    .row.user .avatar{background:linear-gradient(135deg,var(--user-1),var(--user-2));border:0;color:#fff}
+
+    .bubble{
+      max-width:76%;padding:13px 16px;border-radius:var(--radius);
+      line-height:1.65;font-size:14.7px;
+      background:var(--surface);border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(10px);
+    }
+    .row.user .bubble{
+      background:linear-gradient(135deg,var(--user-1),var(--user-2));
+      color:#fff;border:0;border-bottom-right-radius:6px;
+      box-shadow:0 12px 30px rgba(91,108,255,.32);
+    }
+    .row.bot .bubble{border-bottom-left-radius:6px}
+    .row.error .bubble{background:var(--danger-bg);border-color:rgba(255,90,90,.35);color:var(--danger)}
+
+    .bubble p{margin:0 0 10px}
+    .bubble p:last-child{margin-bottom:0}
+    .bubble ul,.bubble ol{margin:6px 0 10px;padding-left:22px}
+    .bubble li{margin:3px 0}
+    .bubble h3{margin:12px 0 6px;font-size:15px}
+    .bubble h3:first-child{margin-top:0}
+    .bubble code.inline{
+      background:rgba(127,140,255,.16);padding:2px 6px;border-radius:6px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.8px;
+    }
+    .row.user .bubble code.inline{background:rgba(255,255,255,.20)}
+
+    pre.code{
+      position:relative;margin:10px 0;padding:36px 14px 14px;
+      background:var(--code-bg);border:1px solid var(--border);border-radius:12px;
+      overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:12.9px;line-height:1.6;color:#dfe4f5;
+    }
+    pre.code .lang{position:absolute;top:9px;left:14px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+    pre.code .copy{
+      position:absolute;top:6px;right:8px;cursor:pointer;
+      padding:4px 10px;border-radius:8px;font-size:11px;
+      background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);
+    }
+    pre.code .copy:hover{color:#fff;border-color:var(--accent)}
+
+    .meta{margin-top:9px;padding-top:8px;border-top:1px dashed var(--border);font-size:11.5px;color:var(--faint);display:flex;gap:12px;flex-wrap:wrap}
+    .meta span{font-variant-numeric:tabular-nums}
+
+    /* typing dots */
+    .typing{display:flex;gap:5px;padding:4px 2px}
+    .typing i{width:7px;height:7px;border-radius:50%;background:var(--faint);animation:blink 1.3s infinite}
+    .typing i:nth-child(2){animation-delay:.18s}
+    .typing i:nth-child(3){animation-delay:.36s}
+    @keyframes blink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+    /* ---------- empty state ---------- */
+    .empty{margin:auto;text-align:center;padding:20px 0 40px;animation:rise .5s ease both}
+    .empty .mark{
+      width:66px;height:66px;margin:0 auto 18px;border-radius:20px;
+      display:grid;place-items:center;font-size:30px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow:0 16px 40px rgba(124,140,255,.35);
+    }
+    .empty h2{margin:0 0 8px;font-size:23px;font-weight:650;letter-spacing:-.02em}
+    .empty p{margin:0 0 22px;color:var(--muted);font-size:14px}
+    .chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:600px}
+    .chip{
+      cursor:pointer;padding:10px 15px;border-radius:12px;font-size:13px;text-align:left;
+      background:var(--surface);border:1px solid var(--border);color:var(--text);
+      transition:.18s;backdrop-filter:blur(8px);
+    }
+    .chip:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+
+    /* ---------- composer ---------- */
+    .composer{padding:10px 0 20px}
+    .box{
+      display:flex;align-items:flex-end;gap:10px;padding:10px 10px 10px 16px;
+      background:var(--surface-solid);border:1px solid var(--border);border-radius:20px;
+      box-shadow:var(--shadow);transition:border-color .2s;
+    }
+    html[data-theme="dark"] .box{background:rgba(20,26,43,.75);backdrop-filter:blur(14px)}
+    .box:focus-within{border-color:var(--accent)}
+    textarea{
+      flex:1;border:0;outline:0;resize:none;background:transparent;color:var(--text);
+      font:inherit;font-size:14.7px;line-height:1.55;max-height:170px;padding:7px 0;
+    }
+    textarea::placeholder{color:var(--faint)}
+    textarea.sending{opacity:.5}
+    .send{
+      width:40px;height:40px;flex:none;border:0;border-radius:14px;cursor:pointer;
+      display:grid;place-items:center;color:#fff;font-size:16px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow:0 8px 20px rgba(124,140,255,.35);transition:.18s;
+    }
+    .send:hover{transform:translateY(-1px) scale(1.03)}
+    .send:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .hint{margin:9px 4px 0;font-size:11.5px;color:var(--faint);display:flex;justify-content:space-between}
+    kbd{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-size:10.5px;font-family:inherit}
+
+    @media (max-width:640px){
+      .app{padding:0 12px}
+      .bubble{max-width:88%}
+      .pill.tokens{display:none}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">🐍</div>
+    <div class="titles">
+      <h1>Python Tutor</h1>
+      <p><span class="dot"></span> {{ model }}</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="pill tokens" title="Tokens used this session">
+      ⚡ <b>{{ totals.total }}</b> tokens
+    </div>
+    <button class="icon-btn" id="theme" title="Toggle theme">🌙</button>
+    <form action="/reset" method="post" style="display:contents">
+      <button class="icon-btn" title="New chat">✨</button>
+    </form>
+  </header>
+
+  <main class="chat" id="chat">
+    {% if not history %}
+      <div class="empty">
+        <div class="mark">🐍</div>
+        <h2>What are we learning today?</h2>
+        <p>Ask anything about Python — I explain it clearly, with examples.</p>
+        <div class="chips">
+          <div class="chip">Explain list comprehensions with examples</div>
+          <div class="chip">What's the difference between a list and a tuple?</div>
+          <div class="chip">How do decorators actually work?</div>
+          <div class="chip">Show me how to read a CSV with pandas</div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% for msg in history %}
+      {% if msg.role == 'user' %}
+        <div class="row user">
+          <div class="avatar">🙂</div>
+          <div class="bubble">{{ msg.content }}</div>
+        </div>
+      {% elif msg.role == 'assistant' %}
+        <div class="row bot">
+          <div class="avatar">🐍</div>
+          <div class="bubble">
+            <div class="raw" hidden>{{ msg.content }}</div>
+            <div class="md"></div>
+            {% if msg.usage %}
+              <div class="meta">
+                <span>prompt <b>{{ msg.usage.prompt }}</b></span>
+                <span>completion <b>{{ msg.usage.completion }}</b></span>
+                {% if msg.usage.reasoning %}<span>reasoning <b>{{ msg.usage.reasoning }}</b></span>{% endif %}
+                <span>total <b>{{ msg.usage.total }}</b></span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <div class="row error">
+          <div class="avatar">⚠️</div>
+          <div class="bubble">{{ msg.content }}</div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </main>
+
+  <div class="composer">
+    <form method="POST" class="box" id="form">
+      <textarea name="user_input" id="input" rows="1" placeholder="Ask me something about Python…" required autofocus></textarea>
+      <button class="send" type="submit" title="Send">➤</button>
+    </form>
+    <div class="hint">
+      <span><kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line</span>
+      <span>prompt {{ totals.prompt }} · completion {{ totals.completion }}</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const chat  = document.getElementById('chat');
+  const form  = document.getElementById('form');
+  const input = document.getElementById('input');
+
+  /* ---------- tiny markdown renderer (code fences, lists, bold, inline code) ---------- */
+  const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+  function inline(s){
+    return esc(s)
+      .replace(/`([^`]+)`/g, '<code class="inline">$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<i>$2</i>');
+  }
+
+  function prose(block){
+    const out = [];
+    let list = null;
+    for (const line of block.split('\n')){
+      const bullet  = line.match(/^\s*[-*]\s+(.*)/);
+      const numbered = line.match(/^\s*\d+[.)]\s+(.*)/);
+      const heading = line.match(/^#{1,6}\s+(.*)/);
+      if (bullet || numbered){
+        const tag = bullet ? 'ul' : 'ol';
+        if (list !== tag){ if (list) out.push(`</${list}>`); out.push(`<${tag}>`); list = tag; }
+        out.push('<li>' + inline((bullet || numbered)[1]) + '</li>');
+        continue;
+      }
+      if (list){ out.push(`</${list}>`); list = null; }
+      if (heading)         out.push('<h3>' + inline(heading[1]) + '</h3>');
+      else if (line.trim()) out.push('<p>' + inline(line) + '</p>');
+    }
+    if (list) out.push(`</${list}>`);
+    return out.join('');
+  }
+
+  function render(text){
+    return text.split(/```/).map((part, i) => {
+      if (i % 2 === 0) return prose(part);
+      const nl   = part.indexOf('\n');
+      const lang = nl > -1 ? part.slice(0, nl).trim() : '';
+      const code = nl > -1 ? part.slice(nl + 1) : part;
+      return '<pre class="code"><span class="lang">' + esc(lang || 'code') + '</span>' +
+             '<button class="copy" type="button">copy</button>' +
+             esc(code.replace(/\n+$/, '')) + '</pre>';
+    }).join('');
+  }
+
+  document.querySelectorAll('.row.bot .bubble').forEach(b => {
+    b.querySelector('.md').innerHTML = render(b.querySelector('.raw').textContent);
+  });
+
+  /* copy buttons */
+  chat.addEventListener('click', e => {
+    if (!e.target.classList.contains('copy')) return;
+    const pre = e.target.closest('pre');
+    const code = pre.cloneNode(true);
+    code.querySelector('.copy').remove(); code.querySelector('.lang').remove();
+    navigator.clipboard.writeText(code.textContent);
+    e.target.textContent = 'copied ✓';
+    setTimeout(() => e.target.textContent = 'copy', 1400);
+  });
+
+  /* ---------- composer behaviour ---------- */
+  const grow = () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; };
+  input.addEventListener('input', grow);
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); form.requestSubmit(); }
+  });
+
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    input.value = c.textContent.trim(); grow(); input.focus();
+  }));
+
+  /* optimistic bubbles while the server thinks */
+  form.addEventListener('submit', () => {
+    const text = input.value.trim();
+    if (!text) return;
+    document.querySelector('.empty')?.remove();
+
+    const userRow = document.createElement('div');
+    userRow.className = 'row user';
+    userRow.innerHTML = '<div class="avatar">🙂</div><div class="bubble"></div>';
+    userRow.querySelector('.bubble').textContent = text;   // textContent = no HTML injection
+
+    const botRow = document.createElement('div');
+    botRow.className = 'row bot';
+    botRow.innerHTML = '<div class="avatar">🐍</div><div class="bubble">' +
+                       '<div class="typing"><i></i><i></i><i></i></div></div>';
+
+    chat.append(userRow, botRow);
+    chat.scrollTop = chat.scrollHeight;
+    form.querySelector('.send').disabled = true;
+    input.readOnly = true;   // readOnly, NOT disabled — disabled fields aren't submitted
+    input.classList.add('sending');
+  });
+
+  /* ---------- theme ---------- */
+  const themeBtn = document.getElementById('theme');
+  const setTheme = t => {
+    document.documentElement.dataset.theme = t;
+    themeBtn.textContent = t === 'dark' ? '🌙' : '☀️';
+    try { localStorage.setItem('tutor-theme', t); } catch (e) {}
+  };
+  try { setTheme(localStorage.getItem('tutor-theme') || 'dark'); } catch (e) {}
+  themeBtn.addEventListener('click', () =>
+    setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+  /* land at the newest message (after fonts/layout settle) */
+  const toBottom = () => chat.scrollTo({top: chat.scrollHeight, behavior: 'instant'});
+  toBottom();
+  requestAnimationFrame(toBottom);
+  window.addEventListener('load', toBottom);
+  document.fonts?.ready.then(toBottom);   // fonts swapping in shifts the height
+  setTimeout(toBottom, 150);
+</script>
+</body>
+</html>
