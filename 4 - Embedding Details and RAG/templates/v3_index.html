@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local RAG</title>
+<style>
+  /* Sized in rem throughout, so A- / A+ scales the whole page. */
+  html{font-size:17px}
+  :root{
+    --bg:#0f1117; --card:#191c2a; --line:#2c3042;
+    --ink:#e9ebf2; --dim:#9aa1b4;
+    --accent:#8b85ff; --good:#3ddc84; --bad:#ff6b6b; --key:#ffd23f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font:1rem/1.55 'Segoe UI',system-ui,-apple-system,sans-serif;
+       background:var(--bg);color:var(--ink);min-height:100vh}
+  .wrap{width:min(94vw,60rem);margin:0 auto;padding:2rem 1rem 5rem}
+
+  header{display:flex;justify-content:space-between;align-items:baseline;
+         gap:1rem;flex-wrap:wrap;margin-bottom:1.4rem}
+  header h1{font-size:1.35rem;font-weight:700;letter-spacing:-.01em}
+  header h1 b{color:var(--accent)}
+  .sub{color:var(--dim);font-size:.82rem}
+
+  .bar{display:flex;gap:.6rem}
+  .bar input{flex:1;min-width:0;padding:.8rem 1rem;font:inherit;font-size:1.05rem;
+       color:var(--ink);background:var(--card);border:1px solid var(--line);
+       border-radius:10px;outline:none}
+  .bar input:focus{border-color:var(--accent)}
+  .bar button{padding:.8rem 1.7rem;font:inherit;font-size:1.05rem;font-weight:650;
+       color:#12141d;background:var(--accent);border:0;border-radius:10px;cursor:pointer}
+  .bar button:hover{filter:brightness(1.1)}
+  .bar button:disabled{opacity:.45;cursor:not-allowed}
+
+  .opts{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap;
+        margin:.85rem .15rem 0;color:var(--dim);font-size:.87rem}
+  .opts label{display:flex;align-items:center;gap:.4rem}
+  .opts select,.opts input[type=text]{font:inherit;color:var(--ink);background:var(--card);
+       border:1px solid var(--line);border-radius:7px;padding:.28rem .45rem;outline:none}
+  .opts input[type=text]{width:11rem;border-color:#5a4d12;background:#1b1810;color:var(--key)}
+  .opts input[type=text]:focus,.opts select:focus{border-color:var(--accent)}
+  .opts input[type=checkbox]{accent-color:var(--accent);width:.95rem;height:.95rem}
+  .fs{margin-left:auto;display:flex;gap:.3rem}
+  .fs button{width:1.9rem;height:1.9rem;font:inherit;font-size:.85rem;color:var(--ink);
+       background:var(--card);border:1px solid var(--line);border-radius:7px;cursor:pointer}
+  .fs button:hover{border-color:var(--accent)}
+
+  .spin{display:none;padding:2.5rem 0;text-align:center;color:var(--dim)}
+  .spin.on{display:block}
+  .spin::before{content:'';display:inline-block;width:20px;height:20px;margin-right:.5rem;
+       vertical-align:-4px;border:3px solid var(--line);border-top-color:var(--accent);
+       border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  h2{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+     color:var(--dim);margin:2.2rem 0 .8rem}
+
+  .verdict{border-radius:12px;padding:1rem 1.2rem;margin-top:1.8rem;
+       border:1px solid var(--line);border-left:4px solid var(--dim);background:var(--card)}
+  .verdict.good{border-left-color:var(--good)}
+  .verdict.bad{border-left-color:var(--bad)}
+  .verdict .big{font-size:1.15rem;font-weight:700;line-height:1.4}
+  .verdict.good .big{color:var(--good)}
+  .verdict.bad .big{color:var(--bad)}
+  .verdict .why{color:var(--dim);font-size:.9rem;margin-top:.3rem}
+
+  .answer{border:1px solid var(--accent);border-radius:12px;padding:1.2rem 1.3rem;
+       background:linear-gradient(180deg,#1e2137,#191c2a);margin-top:1.2rem}
+  .answer .who{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;
+       color:var(--accent);font-weight:700;margin-bottom:.5rem}
+  .answer p{font-size:1.08rem;line-height:1.7;white-space:pre-wrap}
+  .cite{color:var(--accent);font-weight:700;cursor:pointer}
+  .cite:hover{text-decoration:underline}
+
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;
+     color:var(--dim);font-weight:600;padding:.4rem .55rem;border-bottom:1px solid var(--line)}
+  td{padding:.5rem .55rem;border-bottom:1px solid var(--line)}
+  tr.cut td{opacity:.45}
+  td.n{font-variant-numeric:tabular-nums;color:var(--dim)}
+  td.r{font-weight:700;color:var(--accent)}
+  tr.cut td.r{color:var(--dim)}
+  .ok{color:var(--good);font-weight:700}
+  .noo{color:#6b7186}
+
+  .card{border:1px solid var(--line);border-left:4px solid transparent;border-radius:10px;
+        background:var(--card);padding:.85rem 1.05rem;margin-bottom:.6rem}
+  .card.sent{border-left-color:var(--good)}
+  .head{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-bottom:.5rem}
+  .num{font-size:1.15rem;font-weight:800;color:var(--accent)}
+  .name{font-weight:600;margin-right:auto}
+  .tag{font-size:.74rem;font-weight:600;padding:.14rem .5rem;border-radius:6px;
+       background:#262a3b;color:var(--dim);white-space:nowrap}
+  .tag.rank{background:#12331f;color:#7ef0ab}
+  .tag.key{background:#3a3410;color:var(--key)}
+  .text{font-size:1rem;line-height:1.75;white-space:pre-wrap;position:relative;
+        max-height:8.5em;overflow:hidden}
+  .text.open{max-height:none}
+  .text:not(.open)::after{content:'';position:absolute;inset:auto 0 0 0;height:3em;
+        background:linear-gradient(transparent,var(--card))}
+  mark{background:var(--key);color:#12141d;border-radius:3px;padding:.02em .15em;font-weight:700}
+  .more{margin-top:.45rem;background:none;border:0;padding:0;font:inherit;font-size:.85rem;
+        font-weight:600;color:var(--accent);cursor:pointer}
+  .more:hover{text-decoration:underline}
+
+  details{margin-top:1.8rem}
+  summary{cursor:pointer;color:var(--accent);font-size:.88rem;font-weight:600}
+  pre{margin-top:.7rem;background:#0c0e15;border:1px solid var(--line);border-radius:9px;
+      padding:1rem;font-size:.8rem;line-height:1.6;color:var(--dim);
+      white-space:pre-wrap;max-height:28rem;overflow:auto}
+  .err{border:1px solid #7f1d1d;background:#1c1012;color:var(--bad);
+       border-radius:9px;padding:1rem;margin-top:1.5rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><b>&#9889;</b> Local RAG</h1>
+    <span class="sub">{{ num_chunks }} chunks &middot; {{ embed_model }} &middot; {{ gen_model }}</span>
+  </header>
+
+  <div class="bar">
+    <input id="q" type="text" autofocus autocomplete="off"
+           placeholder="Ask something about the novels&hellip;"
+           value="What was the speckled band?">
+    <button id="go" onclick="ask()">Ask</button>
+  </div>
+
+  <div class="opts">
+    <label>highlight
+      <input id="expect" type="text" autocomplete="off"
+             title="Highlighted and counted only. Never sent to the model."
+             placeholder="phrase to look for" value="swamp adder">
+    </label>
+    <label>top-k
+      <select id="topk"><option>1</option><option selected>3</option><option>5</option></select>
+    </label>
+    <label>neighbours
+      <select id="nb"><option>0</option><option selected>1</option><option>2</option></select>
+    </label>
+    <label><input type="checkbox" id="gen" checked> generate</label>
+    <span class="fs">
+      <button onclick="fs(-2)" title="smaller">A&minus;</button>
+      <button onclick="fs(2)" title="bigger">A+</button>
+    </span>
+  </div>
+
+  <div class="spin" id="spin">thinking&hellip;</div>
+  <div id="out"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+for (const id of ['q', 'expect'])
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') ask(); });
+
+function fs(d) {
+  const n = Math.min(30, Math.max(13,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) + d));
+  document.documentElement.style.fontSize = n + 'px';
+  try { localStorage.setItem('ragFs', n); } catch (e) {}
+}
+try {
+  const v = localStorage.getItem('ragFs');
+  if (v) document.documentElement.style.fontSize = v + 'px';
+} catch (e) {}
+
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function markup(text, phrase) {
+  if (!phrase) return esc(text);
+  const rx = new RegExp(phrase.trim().split(/\s+/)
+    .map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+'), 'gi');
+  let out = '', last = 0, m;
+  while ((m = rx.exec(text)) !== null) {
+    out += esc(text.slice(last, m.index)) + '<mark>' + esc(m[0]) + '</mark>';
+    last = m.index + m[0].length;
+    if (!m[0].length) rx.lastIndex++;
+  }
+  return out + esc(text.slice(last));
+}
+
+async function ask() {
+  const query = $('q').value.trim();
+  if (!query) return;
+  $('go').disabled = true; $('spin').classList.add('on'); $('out').innerHTML = '';
+  try {
+    const r = await fetch('/ask', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query, expect: $('expect').value.trim(),
+        topk: +$('topk').value, neighbors: +$('nb').value, generate: $('gen').checked})
+    });
+    const d = await r.json();
+    $('out').innerHTML = d.error ? `<div class="err">${esc(d.error)}</div>` : html(d);
+  } catch (e) {
+    $('out').innerHTML = `<div class="err">Request failed: ${esc(e.message)}</div>`;
+  } finally {
+    $('go').disabled = false; $('spin').classList.remove('on');
+  }
+}
+
+function verdict(d) {
+  if (!d.expect) return '';
+  const q = `&ldquo;${esc(d.expect)}&rdquo;`;
+  const inCtx = d.contexts.filter(c => c.has_answer);
+  const hitRanks = d.hits.filter(h => h.has_answer).map(h => h.rank);
+  let cls, big, why;
+
+  if (inCtx.length && hitRanks.length && hitRanks[0] <= d.topk) {
+    cls = 'good'; big = 'The model saw it.';
+    why = `${q} is in passage [${inCtx[0].n}] &mdash; rank ${hitRanks[0]}, which top-k=${d.topk} sent through.`;
+  } else if (inCtx.length) {
+    cls = 'good'; big = 'The model saw it &mdash; but no hit it sent contained it.';
+    why = `A neighbouring chunk carried ${q} into passage [${inCtx[0].n}]. That is what the &plusmn;window buys you: retrieval landed next to the answer, not on it.`;
+  } else if (hitRanks.length) {
+    cls = 'bad'; big = `The model never saw it. It is at rank ${hitRanks[0]}.`;
+    why = `top-k=${d.topk} stopped at rank ${d.topk}, so the chunk holding ${q} was cut before the prompt was built.`;
+  } else {
+    cls = 'bad'; big = 'The model never saw it.';
+    why = `${q} is in none of the ${d.hits.length} retrieved chunks, nor their neighbours. Prompting cannot fix this &mdash; retrieval has to change.`;
+  }
+  return `<div class="verdict ${cls}"><div class="big">${big}</div><div class="why">${why}</div></div>`;
+}
+
+function html(d) {
+  let h = verdict(d);
+
+  if (d.answer) {
+    h += `<div class="answer"><div class="who">Answer</div><p>${
+      markup(d.answer, d.expect).replace(/\[(\d+)\]/g,
+        (_, n) => `<span class="cite" onclick="jump(${n})">[${n}]</span>`)
+    }</p></div>`;
+  }
+
+  h += `<h2>What FAISS found</h2><table><tr>
+        <th>rank</th><th>score</th><th>book</th><th>chunk</th>
+        ${d.expect ? `<th>${esc(d.expect)}</th>` : ''}<th></th></tr>`;
+  for (const x of d.hits) {
+    h += `<tr class="${x.used ? '' : 'cut'}">
+      <td class="r">#${x.rank}</td><td class="n">${x.score}</td>
+      <td>${esc(x.title)}</td><td class="n">${x.chunk_index}</td>
+      ${d.expect ? `<td class="${x.has_answer ? 'ok' : 'noo'}">${x.has_answer ? '&#10003;' : '&#10007;'}</td>` : ''}
+      <td class="n">${x.used ? 'sent' : 'cut by top-k'}</td></tr>`;
+  }
+  h += `</table>`;
+
+  h += `<h2>What the model got &mdash; ${d.contexts.length} passages</h2>`;
+  for (const c of d.contexts) {
+    const uid = 'c' + c.n, open = !!c.has_answer;
+    h += `<div class="card ${c.from_rank ? 'sent' : ''}" id="ctx${c.n}">
+      <div class="head">
+        <span class="num">[${c.n}]</span><span class="name">${esc(c.title)}</span>
+        ${c.has_answer ? `<span class="tag key">&#10003; ${esc(d.expect)}</span>` : ''}
+        ${c.from_rank ? `<span class="tag rank">rank ${c.from_rank}</span>`
+                      : `<span class="tag">neighbour</span>`}
+        <span class="tag">chunk ${c.chunk_index}</span>
+        <span class="tag">~${c.approx_words} words</span>
+      </div>
+      <div class="text${open ? ' open' : ''}" id="${uid}">${markup(c.text, d.expect)}</div>
+      <button class="more" onclick="more(this,'${uid}')">${open ? 'Collapse' : 'Show full text'}</button>
+    </div>`;
+  }
+
+  return h + `<details><summary>Show the exact prompt sent to the model</summary>
+              <pre>${esc(d.prompt)}</pre></details>`;
+}
+
+function jump(n) {
+  const el = document.getElementById('ctx' + n);
+  if (!el) return;
+  el.scrollIntoView({behavior: 'smooth', block: 'center'});
+  el.style.transition = 'background .4s';
+  el.style.background = 'rgba(139,133,255,.2)';
+  setTimeout(() => el.style.background = '', 1100);
+}
+
+function more(btn, uid) {
+  btn.textContent = $(uid).classList.toggle('open') ? 'Collapse' : 'Show full text';
+}
+</script>
+</body>
+</html>
