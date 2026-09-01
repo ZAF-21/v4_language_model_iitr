@@ -12,3 +12,4 @@ Intro_To_PyTorch/data/
 Intro_To_PyTorch/best_resnet101_head.pth
 *.pth
 2 - Working with LLMs: Other Modalities/videos
+5 - Enhance your SupportBot/chroma_db/chroma.sqlite3
