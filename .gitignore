@@ -2,6 +2,21 @@
 .DS_Store
 **/*.DS_Store
 
+# Secrets - this repo is public, never commit API keys
+.env
+.env.*
+!.env.example
+
+# Python bytecode and notebook checkpoints
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Virtualenvs
+venv/
+.venv/
+env/
+
 # Large image dataset (not for version control)
 ML_Lec/CNN Hands On/New_landmark_images
 
@@ -11,5 +26,9 @@ Intro_To_PyTorch/data/
 # Model checkpoints
 Intro_To_PyTorch/best_resnet101_head.pth
 *.pth
-2 - Working with LLMs: Other Modalities/videos
-5 - Enhance your SupportBot/chroma_db/chroma.sqlite3
+
+# Class video source material (~326 MB) - not distributed via git
+2 - Working with LLMs - Other Modalities/videos/
+
+# Chroma vector store - regenerate by re-running the embedding step
+5 - Enhance your SupportBot/chroma_db/
