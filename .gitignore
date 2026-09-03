@@ -3,7 +3,7 @@
 **/*.DS_Store
 
 # Large image dataset (not for version control)
-ML_Lec/CNN Hands On /New_landmark_images
+ML_Lec/CNN Hands On/New_landmark_images
 
 # Auto-downloaded datasets (MNIST, CIFAR-100) - re-fetched by torchvision on demand
 Intro_To_PyTorch/data/
